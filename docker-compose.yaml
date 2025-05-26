@@ -1,0 +1,88 @@
+services:
+  # Used by Redis storage extension
+  otel-valkey:
+    container_name: otel-valkey
+    image: docker.io/valkey/valkey:8.1.1-alpine3.21
+    restart: always
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Receives requests from otel-gen and forwards to otel-two
+  otel-one:
+    container_name: otel-one
+    image: docker.io/otel/opentelemetry-collector-contrib:0.126.0
+    restart: always
+    volumes:
+      - ./configs/otel-one.yaml:/etc/otel/config.yaml:ro
+    command: ["--config", "/etc/otel/config.yaml"]
+    depends_on:
+      otel-valkey:
+        condition: service_healthy
+
+  # Receives signals from otel-one and sends to stdout via debug exporter
+  otel-two:
+    container_name: otel-two
+    image: docker.io/otel/opentelemetry-collector-contrib:0.126.0
+    restart: always
+    volumes:
+      - ./configs/otel-two.yaml:/etc/otel/config.yaml:ro
+    command: ["--config", "/etc/otel/config.yaml"]
+    depends_on:
+      otel-valkey:
+        condition: service_healthy
+
+  # Generate traces and send to otel-one
+  otel-gen-traces:
+    container_name: otel-gen
+    image: ghcr.io/krzko/otelgen:latest
+    restart: always
+    command: >
+      --otel-exporter-otlp-endpoint otel-one:4317
+      --insecure
+      --duration 60
+      --rate 1
+      traces multi
+    depends_on:
+      otel-one:
+        condition: service_started
+      otel-two:
+        condition: service_started
+
+  # Generate metrics and send to otel-one
+  otel-gen-metrics:
+    container_name: otel-gen
+    image: ghcr.io/krzko/otelgen:latest
+    restart: always
+    command: >
+      --otel-exporter-otlp-endpoint otel-one:4317
+      --insecure
+      --duration 60
+      --rate 1
+      metrics
+    depends_on:
+      otel-one:
+        condition: service_started
+      otel-two:
+        condition: service_started
+
+  # Generate logs and send to otel-one
+  otel-gen-logs:
+    container_name: otel-gen
+    image: ghcr.io/krzko/otelgen:latest
+    restart: always
+    command: >
+      --otel-exporter-otlp-endpoint otel-one:4317
+      --insecure
+      --duration 60
+      --rate 1
+      logs
+    depends_on:
+      otel-one:
+        condition: service_started
+      otel-two:
+        condition: service_started

@@ -1,0 +1,88 @@
+# Receivers
+receivers:
+  jaeger: null
+  zipkin: null
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+# Processors
+processors:
+  batch:
+    send_batch_size: 8192
+    timeout: 1s
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+
+# Exporters
+exporters:
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+  otlp:
+    endpoint: http://otel-two:4317
+    compression: zstd
+    tls:
+      insecure: true
+    sending_queue:
+      storage: redis_storage
+      enabled: true
+      num_consumers: 10
+      wait_for_result: false
+      block_on_overflow: false
+      sizer: requests
+      queue_size: 6800
+    timeout: 5s
+    retry_on_failure:
+      enabled: true
+      initial_interval: 5s
+      max_interval: 30s
+      max_elapsed_time: 600s
+      multiplier: 1.5
+
+# Extensions
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  redis_storage:
+    endpoint: "otel-valkey:6379"
+    expiration: 24h
+    tls:
+      insecure: true
+
+# Service
+service:
+  extensions:
+    - health_check
+    - redis_storage
+  pipelines:
+    logs:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlp
+    metrics:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlp
+    traces:
+      receivers:
+        - otlp
+      processors:
+        - memory_limiter
+        - batch
+      exporters:
+        - otlp
