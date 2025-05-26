@@ -6,11 +6,15 @@ services:
     restart: always
     ports:
       - "6379:6379"
+    command: ["valkey-server", "/etc/valkey/valkey.conf"]
     healthcheck:
       test: ["CMD", "valkey-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - ./configs/valkey.conf:/etc/valkey/valkey.conf:ro
+      - ./valkey:/data
 
   # Receives requests from otel-gen and forwards to otel-two
   otel-one:
@@ -38,51 +42,30 @@ services:
 
   # Generate traces and send to otel-one
   otel-gen-traces:
-    container_name: otel-gen
-    image: ghcr.io/krzko/otelgen:latest
+    container_name: otel-gen-traces
+    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.126.0
     restart: always
-    command: >
-      --otel-exporter-otlp-endpoint otel-one:4317
-      --insecure
-      --duration 60
-      --rate 1
-      traces multi
+    command: traces --otlp-insecure --otlp-endpoint otel-one:4317 --duration 60s --rate 1
     depends_on:
       otel-one:
-        condition: service_started
-      otel-two:
         condition: service_started
 
   # Generate metrics and send to otel-one
   otel-gen-metrics:
-    container_name: otel-gen
-    image: ghcr.io/krzko/otelgen:latest
+    container_name: otel-gen-metrics
+    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.126.0
     restart: always
-    command: >
-      --otel-exporter-otlp-endpoint otel-one:4317
-      --insecure
-      --duration 60
-      --rate 1
-      metrics
+    command: metrics --otlp-insecure --otlp-endpoint otel-one:4317 --duration 60s --rate 1
     depends_on:
       otel-one:
-        condition: service_started
-      otel-two:
         condition: service_started
 
   # Generate logs and send to otel-one
   otel-gen-logs:
-    container_name: otel-gen
-    image: ghcr.io/krzko/otelgen:latest
+    container_name: otel-gen-logs
+    image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.126.0
     restart: always
-    command: >
-      --otel-exporter-otlp-endpoint otel-one:4317
-      --insecure
-      --duration 60
-      --rate 1
-      logs
+    command: logs --otlp-insecure --otlp-endpoint otel-one:4317 --duration 60s --rate 1
     depends_on:
       otel-one:
-        condition: service_started
-      otel-two:
         condition: service_started

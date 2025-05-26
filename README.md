@@ -1,5 +1,5 @@
 # Running
-`podman-compose -f docker-compose.yaml up`
+`podman-compose -f docker-compose.yaml up --always-recreate-deps`
 
 # References
-[otelgen](https://github.com/krzko/otelgen)
+[Telemetry Gen](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/cmd/telemetrygen)

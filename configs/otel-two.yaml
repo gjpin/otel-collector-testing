@@ -1,7 +1,5 @@
 # Receivers
 receivers:
-  jaeger: null
-  zipkin: null
   otlp:
     protocols:
       grpc:
@@ -28,18 +26,15 @@ exporters:
 
 # Extensions
 extensions:
-  health_check:
-    endpoint: 0.0.0.0:13133
   redis_storage:
     endpoint: "otel-valkey:6379"
     expiration: 24h
-    tls:
-      insecure: true
+    # tls:
+    #   insecure: true
 
 # Service
 service:
   extensions:
-    - health_check
     - redis_storage
   pipelines:
     logs:

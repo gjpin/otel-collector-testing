@@ -1,7 +1,5 @@
 # Receivers
 receivers:
-  jaeger: null
-  zipkin: null
   otlp:
     protocols:
       grpc:
@@ -27,9 +25,9 @@ exporters:
     sampling_thereafter: 200
   otlp:
     endpoint: http://otel-two:4317
-    compression: zstd
     tls:
       insecure: true
+    compression: zstd
     sending_queue:
       storage: redis_storage
       enabled: true
@@ -48,18 +46,15 @@ exporters:
 
 # Extensions
 extensions:
-  health_check:
-    endpoint: 0.0.0.0:13133
   redis_storage:
     endpoint: "otel-valkey:6379"
     expiration: 24h
-    tls:
-      insecure: true
+    # tls:
+    #   insecure: true
 
 # Service
 service:
   extensions:
-    - health_check
     - redis_storage
   pipelines:
     logs:
