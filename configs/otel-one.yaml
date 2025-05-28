@@ -54,6 +54,9 @@ extensions:
 
 # Service
 service:
+  telemetry:
+    logs:
+      level: DEBUG
   extensions:
     - redis_storage
   pipelines:
