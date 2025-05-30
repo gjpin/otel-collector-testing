@@ -1,0 +1,28 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-gen-traces
+  namespace: otel-gen
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: otel-gen-traces
+  template:
+    metadata:
+      labels:
+        app: otel-gen-traces
+    spec:
+      containers:
+      - name: otel-gen-traces
+        image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.127.0
+        imagePullPolicy: IfNotPresent
+        args: ["traces", "--otlp-http=true" ,"--otlp-insecure", "--otlp-endpoint=opentelemetry-collector.otel-inbound.svc.cluster.local:4318", "--duration", "14400s", "--rate", "1"]
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"

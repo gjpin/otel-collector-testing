@@ -1,0 +1,262 @@
+fullnameOverride: "opentelemetry-collector"
+namespaceOverride: "otel-outbound"
+
+mode: "deployment"
+
+# Pod DNS policy
+# https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+dnsPolicy: "ClusterFirst"
+
+################################################
+##### Collector configuration
+################################################
+
+config:
+  # Receivers
+  receivers:
+    jaeger: null
+    zipkin: null
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+
+  # Processors
+  processors:
+    batch:
+      send_batch_size: 2 # 8192
+      timeout: 1s
+    memory_limiter:
+      check_interval: 5s
+      limit_percentage: 80
+      spike_limit_percentage: 25
+
+  # Exporters
+  exporters:
+    debug:
+      verbosity: detailed
+      sampling_initial: 5
+      sampling_thereafter: 200
+
+  # Extensions
+  extensions:
+    health_check:
+      endpoint: ${env:MY_POD_IP}:13133
+
+  # Service
+  service:
+    telemetry:
+      logs:
+        level: DEBUG
+    extensions:
+      - health_check
+    pipelines:
+      logs:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - debug
+      metrics:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - debug
+      traces:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - batch
+        exporters:
+          - debug
+
+configMap:
+  create: true
+  existingName: ""
+
+################################################
+##### Other configurations
+################################################
+
+# contrib distribution
+# all available distrutions can be found in the image.repository url
+image:
+  # repository: "ghcr.io/open-telemetry/opentelemetry-collector-releases/opentelemetry-collector-contrib"
+  repository: "ghcr.io/gjpin/otelcontribcol"
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# We're not using otel-collector in a standard way.
+# We already have a collector (Alloy), so we disable all presets.
+presets:
+  logsCollection:
+    enabled: false
+  hostMetrics:
+    enabled: false
+  kubernetesAttributes:
+    enabled: false
+  kubeletMetrics:
+    enabled: false
+  kubernetesEvents:
+    enabled: false
+  clusterMetrics:
+    enabled: false
+
+# service account
+serviceAccount:
+  create: true
+  name: "opentelemetry-collector"
+
+# RBAC
+clusterRole:
+  create: false
+
+# Configuration for ports
+ports:
+  jaeger-compact:
+    enabled: false
+  jaeger-thrift:
+    enabled: false
+  jaeger-grpc:
+    enabled: false
+  zipkin:
+    enabled: false
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+    appProtocol: grpc
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+  metrics:
+    enabled: false
+    containerPort: 8888
+    servicePort: 8888
+    protocol: TCP
+
+# When enabled, the chart will set the GOMEMLIMIT env var to 80% of the configured resources.limits.memory.
+# useGOMEMLIMIT: true
+
+# Resource limits & requests
+# resources:
+#   requests:
+#     cpu: 750m
+#     memory: 3500Mi
+#   limits:
+#     cpu: 1000m
+#     memory: 4000Mi
+
+podAnnotations: {}
+
+podLabels:
+  app: opentelemetry-operator
+
+# Host networking
+hostNetwork: false
+
+# only used with deployment mode
+replicaCount: 3
+
+# only used with deployment mode
+revisionHistoryLimit: 10
+
+# liveness probe
+livenessProbe:
+  initialDelaySeconds: 1
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 1
+  terminationGracePeriodSeconds: 10
+  httpGet:
+    port: 13133
+    path: /
+
+# readiness probe
+readinessProbe:
+  initialDelaySeconds: 1
+  periodSeconds: 10
+  timeoutSeconds: 1
+  successThreshold: 1
+  failureThreshold: 1
+  httpGet:
+    port: 13133
+    path: /
+
+# startup probe
+startupProbe:
+  initialDelaySeconds: 1
+  periodSeconds: 10
+  timeoutSeconds: 1
+  failureThreshold: 1
+  terminationGracePeriodSeconds: 10
+  httpGet:
+    port: 13133
+    path: /
+
+# service
+service:
+  enabled: true
+  type: ClusterIP
+  trafficDistribution: PreferClose
+
+# disable ingress
+ingress:
+  enabled: false
+
+# pod monitor
+podMonitor:
+  enabled: false
+  metricsEndpoints:
+    - port: metrics
+      interval: 15s
+
+# service monitor
+serviceMonitor:
+  enabled: false
+  metricsEndpoints:
+    - port: metrics
+      interval: 15s
+
+# PDB
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+# autoscaling
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 2
+  behavior: {}
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# rollout/upgrade strategy
+rollout:
+  strategy: RollingUpdate
+  rollingUpdate:
+    maxUnavailable: 1
+    maxSurge: 1
+
+# prometheus rule
+prometheusRule:
+  enabled: false
+
+# network policy
+networkPolicy:
+  enabled: false
+
+# Allow containers to share processes across pod namespace
+shareProcessNamespace: false

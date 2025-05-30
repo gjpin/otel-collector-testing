@@ -1,0 +1,25 @@
+fullnameOverride: "valkey"
+
+auth:
+  enabled: true
+  password: "potatoes"
+
+# TODO: enable TLS with custom cert
+tls:
+  enabled: false
+
+# TODO: use storageclass
+persistence:
+  enabled: true
+  path: /data
+  accessModes:
+    - ReadWriteOnce
+  size: 8Gi
+
+commonConfiguration: |-
+  # Enable AOF https://valkey.io/docs/topics/persistence.html
+  appendonly yes
+  appendfilename "appendonly.aof"
+
+  # Save snapshot every 60 seconds if at least 1 key has changed
+  save 60 1

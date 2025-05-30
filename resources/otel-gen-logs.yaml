@@ -1,0 +1,28 @@
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: otel-gen-logs
+#   namespace: otel-gen
+# spec:
+#   replicas: 10
+#   selector:
+#     matchLabels:
+#       app: otel-gen-logs
+#   template:
+#     metadata:
+#       labels:
+#         app: otel-gen-logs
+#     spec:
+#       containers:
+#       - name: otel-gen-logs
+#         image: ghcr.io/open-telemetry/opentelemetry-collector-contrib/telemetrygen:v0.127.0
+#         imagePullPolicy: Always
+#         args: ["logs", "--otlp-insecure", "--otlp-endpoint", "opentelemetry-collector.otel-inbound.svc.cluster.local:4317", "--duration", "14400s", "--rate", "1"]
+#         resources:
+#           requests:
+#             cpu: "100m"
+#             memory: "64Mi"
+#           limits:
+#             cpu: "500m"
+#             memory: "256Mi"
