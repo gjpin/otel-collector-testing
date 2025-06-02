@@ -26,7 +26,7 @@ config:
   # Processors
   processors:
     batch:
-      send_batch_size: 1 # 8192
+      send_batch_size: 200 # 8192
       timeout: 1s
     memory_limiter:
       check_interval: 5s
@@ -40,18 +40,18 @@ config:
       sampling_initial: 5
       sampling_thereafter: 200
     otlp:
-      endpoint: "opentelemetry-collector.otel-outbound.svc.cluster.local:4317"
+      endpoint: "opentelemetry-collector.otel-outbound.svc.cluster.local:43177"
       compression: none
       tls:
         insecure: true
       sending_queue:
-        storage: redis_storage
+        storage: file_storage
         enabled: true
         num_consumers: 10
         wait_for_result: false
         block_on_overflow: true
         sizer: requests
-        queue_size: 1
+        queue_size: 100
       timeout: 5s
       retry_on_failure:
         enabled: true
@@ -60,19 +60,19 @@ config:
         max_elapsed_time: 600s
         multiplier: 1.5
     otlphttp:
-      endpoint: "http://opentelemetry-collector.otel-outbound.svc.cluster.local:4318"
-      compression: none
+      endpoint: "http://opentelemetry-collector.otel-outbound.svc.cluster.local:43188"
+      compression: zstd
       encoding: proto
       tls:
         insecure: true
       sending_queue:
-        storage: redis_storage
+        storage: file_storage
         enabled: true
         num_consumers: 10
         wait_for_result: false
         block_on_overflow: false
         sizer: requests
-        queue_size: 1
+        queue_size: 1000
       timeout: 5s
       retry_on_failure:
         enabled: true
@@ -92,6 +92,15 @@ config:
       password: "potatoes"
       tls:
         insecure: true
+    file_storage:
+      directory: /var/lib/otelcol/storage
+      create_directory: true
+      timeout: 1s
+      compaction:
+        on_start: true
+        directory: /var/lib/otelcol/compaction
+        max_transaction_size: 65_536
+      fsync: false
 
   # Service
   service:
@@ -101,6 +110,7 @@ config:
     extensions:
       - health_check
       - redis_storage
+      - file_storage
     pipelines:
       logs:
         receivers:
@@ -289,7 +299,7 @@ podDisruptionBudget:
 # autoscaling
 autoscaling:
   enabled: true
-  minReplicas: 2
+  minReplicas: 1
   maxReplicas: 3
   behavior: {}
   targetCPUUtilizationPercentage: 80
@@ -312,3 +322,29 @@ networkPolicy:
 
 # Allow containers to share processes across pod namespace
 shareProcessNamespace: false
+
+# Extra volumes for persistent storage
+extraVolumes:
+  - name: otelcol-storage
+    emptyDir: {}
+
+# Mount the storage volume
+extraVolumeMounts:
+  - name: otelcol-storage
+    mountPath: /var/lib/otelcol
+
+extraContainers:
+  - name: debug
+    image: alpine:latest
+    command: ["/bin/sh"]
+    args: ["-c", "while true; do sleep 30; done"]
+    volumeMounts:
+      - name: otelcol-storage
+        mountPath: /var/lib/otelcol
+
+lifecycleHooks:
+  preStop:
+    exec:
+      command:
+      - /bin/sleep
+      - "290"

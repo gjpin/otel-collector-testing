@@ -1,0 +1,125 @@
+---
+apiVersion: v1
+data:
+  collector.yaml: |
+      receivers:
+        otlp:
+          protocols:
+            grpc:
+              endpoint: ${env:MY_POD_IP}:4317
+            http:
+              endpoint: ${env:MY_POD_IP}:4318
+
+      # Processors
+      processors:
+        batch:
+          send_batch_size: 200 # 8192
+          timeout: 1s
+        memory_limiter:
+          check_interval: 5s
+          limit_percentage: 80
+          spike_limit_percentage: 25
+
+      # Exporters
+      exporters:
+        debug:
+          verbosity: detailed
+          sampling_initial: 5
+          sampling_thereafter: 200
+        otlp:
+          # endpoint: "opentelemetry-collector.otel-outbound.svc.cluster.local:4317"
+          endpoint: "0.0.0.0:43177"
+          compression: none
+          tls:
+            insecure: true
+          sending_queue:
+            storage: file_storage
+            enabled: true
+            num_consumers: 10
+            wait_for_result: false
+            block_on_overflow: true
+            sizer: requests
+            queue_size: 100
+          timeout: 5s
+          retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_interval: 30s
+            max_elapsed_time: 600s
+            multiplier: 1.5
+        otlphttp:
+          # endpoint: "opentelemetry-collector.otel-outbound.svc.cluster.local:4317"
+          endpoint: "http://0.0.0.0:43188"
+          compression: zstd
+          encoding: proto
+          tls:
+            insecure: true
+          sending_queue:
+            storage: file_storage
+            enabled: true
+            num_consumers: 10
+            wait_for_result: false
+            block_on_overflow: false
+            sizer: requests
+            queue_size: 1000
+          timeout: 5s
+          retry_on_failure:
+            enabled: true
+            initial_interval: 5s
+            max_interval: 30s
+            max_elapsed_time: 600s
+            multiplier: 1.5
+
+      # Extensions
+      extensions:
+        file_storage:
+          directory: /var/lib/otelcol/storage
+          create_directory: true
+          timeout: 1s
+          compaction:
+            on_start: true
+            directory: /var/lib/otelcol/compaction
+            max_transaction_size: 65_536
+          fsync: false
+
+      # Service
+      service:
+        telemetry:
+          logs:
+            level: DEBUG
+        extensions:
+          - file_storage
+        pipelines:
+          logs:
+            receivers:
+              - otlp
+            processors:
+              - memory_limiter
+              - batch
+            exporters:
+              - otlphttp
+              - debug
+          metrics:
+            receivers:
+              - otlp
+            processors:
+              - memory_limiter
+              - batch
+            exporters:
+              - otlphttp
+              - debug
+          traces:
+            receivers:
+              - otlp
+            processors:
+              - memory_limiter
+              - batch
+            exporters:
+              - otlphttp
+              - debug
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: collector-config
+  namespace: opentelemetry
+---
