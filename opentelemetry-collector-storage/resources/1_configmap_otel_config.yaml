@@ -32,9 +32,8 @@ data:
           sampling_initial: 5
           sampling_thereafter: 200
         otlp:
-          # endpoint: "opentelemetry-collector.otel-outbound.svc.cluster.local:4317"
-          endpoint: "0.0.0.0:43177"
-          compression: none
+          endpoint: "otel-tui.opentelemetry.svc.cluster.local:4317"
+          compression: zstd
           tls:
             insecure: true
           sending_queue:
@@ -42,9 +41,9 @@ data:
             enabled: true
             num_consumers: 10
             wait_for_result: false
-            block_on_overflow: true
+            block_on_overflow: false
             sizer: requests
-            queue_size: 100
+            queue_size: 1000
           timeout: 5s
           retry_on_failure:
             enabled: true
@@ -53,12 +52,11 @@ data:
             max_elapsed_time: 600s
             multiplier: 1.5
         otlphttp:
-          # endpoint: "opentelemetry-collector.otel-outbound.svc.cluster.local:4317"
-          endpoint: "http://0.0.0.0:43188"
+          endpoint: "http://otel-tui.opentelemetry.svc.cluster.local:4318"
           compression: zstd
           encoding: proto
           tls:
-            insecure: true
+            insecure: false
           sending_queue:
             storage: file_storage
             enabled: true
@@ -88,6 +86,9 @@ data:
             on_start: true
             directory: /var/lib/otelcol/compaction
             max_transaction_size: 65_536
+            rebound_needed_threshold_mib: 10
+            rebound_trigger_threshold_mib: 1
+            check_interval: 5s
           fsync: false
 
       # Service
@@ -106,8 +107,7 @@ data:
               - memory_limiter
               - batch
             exporters:
-              - otlphttp
-              - debug
+              - otlp
           metrics:
             receivers:
               - otlp
@@ -115,8 +115,7 @@ data:
               - memory_limiter
               - batch
             exporters:
-              - otlphttp
-              - debug
+              - otlp
           traces:
             receivers:
               - otlp
@@ -124,6 +123,5 @@ data:
               - memory_limiter
               - batch
             exporters:
-              - otlphttp
-              - debug
+              - otlp
 ---

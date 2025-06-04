@@ -1,0 +1,58 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: otel-collector-entrypoint
+  namespace: opentelemetry
+data:
+  otel-collector-entrypoint.sh: |
+    #!/bin/sh
+    #
+    # This script will:
+    # 1. Launch the OpenTelemetry Collector Contrib binary in the background.
+    # 2. Trap SIGTERM. On SIGTERM, poll the on-disk queue directory until
+    #    it is “small enough” (i.e. < 100 blocks), then forward SIGTERM to
+    #    the collector process so it can shut down cleanly.
+    #
+    set -e
+
+    OTEL_BINARY="/otelcol-contrib"
+    OTEL_ARGS="--config=/conf/collector.yaml"
+    # QUEUE_FILE="/var/lib/otelcol/storage/exporter_otlphttp__traces"
+    QUEUE_FILE="/var/lib/otelcol/storage/exporter_otlp__traces"
+    BLOCK_THRESHOLD=100
+
+    # Launch the Collector in the background
+    echo "Starting OTel Collector..."
+    $OTEL_BINARY $OTEL_ARGS &
+    child_pid=$!
+
+    # When we receive SIGTERM, wait until the on-disk queue is below threshold
+    cleanup() {
+      echo "Wrapper: received SIGTERM (pid $$). Waiting for queue < $BLOCK_THRESHOLD blocks..."
+
+      while true; do
+        # stat -c %b gives number of 512-byte blocks. If the directory doesn't exist yet, we treat it as 0.
+        blocks=$(stat -c %b "$QUEUE_FILE" 2>/dev/null || echo 0)
+        if [ "$blocks" -lt "$BLOCK_THRESHOLD" ]; then
+          echo "Wrapper: queue is small enough ($blocks blocks). Proceeding with shutdown."
+          break
+        fi
+        echo "Wrapper: still $blocks blocks; sleeping 5s..."
+        sleep 5
+      done
+
+      # Forward SIGTERM to the collector process, then wait for it to exit
+      echo "Wrapper: forwarding SIGTERM to child (pid $child_pid)..."
+      kill -SIGTERM "$child_pid" || true
+      wait "$child_pid"
+      echo "Wrapper: child exited. Exiting wrapper."
+      exit 0
+    }
+
+    trap 'cleanup' TERM
+
+    # Wait for the collector process to exit (e.g. if it crashes or exits normally)
+    wait "$child_pid"
+    exit $?
