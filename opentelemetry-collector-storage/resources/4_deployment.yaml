@@ -60,6 +60,14 @@ spec:
           httpGet:
             path: /
             port: 13133
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 13133
+        startupProbe:
+          httpGet:
+            path: /
+            port: 13133
       volumes:
           - name: collector-config
             configMap:
