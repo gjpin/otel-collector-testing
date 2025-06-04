@@ -49,7 +49,7 @@ data:
             enabled: true
             initial_interval: 5s
             max_interval: 30s
-            max_elapsed_time: 600s
+            max_elapsed_time: 21600s # 6 hours
             multiplier: 1.5
         otlphttp:
           endpoint: "http://otel-tui.opentelemetry.svc.cluster.local:4318"
@@ -70,7 +70,7 @@ data:
             enabled: true
             initial_interval: 5s
             max_interval: 30s
-            max_elapsed_time: 600s
+            max_elapsed_time: 21600s # 6 hours
             multiplier: 1.5
 
       # Extensions
