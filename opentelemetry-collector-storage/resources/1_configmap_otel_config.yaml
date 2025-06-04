@@ -84,8 +84,10 @@ data:
           timeout: 1s
           compaction:
             on_start: true
+            on_rebound: true
+            cleanup_on_start: false
             directory: /var/lib/otelcol/compaction
-            max_transaction_size: 65_536
+            max_transaction_size: 65536
             rebound_needed_threshold_mib: 10
             rebound_trigger_threshold_mib: 1
             check_interval: 5s
