@@ -45,7 +45,7 @@ data:
 
       # Forward SIGTERM to the collector process, then wait for it to exit
       echo "Wrapper: forwarding SIGTERM to child (pid $child_pid)..."
-      kill -15 "$child_pid" || true
+      kill -s TERM "$child_pid" || true
       wait "$child_pid"
       echo "Wrapper: child exited. Exiting wrapper."
       exit 0
