@@ -43,7 +43,7 @@ data:
             wait_for_result: false
             block_on_overflow: false
             sizer: requests
-            queue_size: 1000
+            queue_size: 10000000 # 1 million
           timeout: 5s
           retry_on_failure:
             enabled: true
@@ -64,7 +64,7 @@ data:
             wait_for_result: false
             block_on_overflow: false
             sizer: requests
-            queue_size: 1000
+            queue_size: 10000000 # 1 million
           timeout: 5s
           retry_on_failure:
             enabled: true
@@ -87,7 +87,7 @@ data:
             on_rebound: true
             cleanup_on_start: false
             directory: /var/lib/otelcol/compaction
-            max_transaction_size: 65536
+            max_transaction_size: 0
             rebound_needed_threshold_mib: 10
             rebound_trigger_threshold_mib: 1
             check_interval: 5s

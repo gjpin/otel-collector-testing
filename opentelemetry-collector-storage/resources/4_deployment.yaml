@@ -1,87 +1,162 @@
----
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Pod
 metadata:
   name: opentelemetry-collector
   namespace: opentelemetry
   labels:
     app: opentelemetry-collector
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: opentelemetry-collector
-  template:
-    metadata:
-      labels:
-        app: opentelemetry-collector
-    spec:
-      serviceAccountName: opentelemetry-collector
-      terminationGracePeriodSeconds: 3600
-      securityContext:
-        {}
-      # shareProcessNamespace: true # Uncomment to share process namespace for debugging
-      containers:
-      - name: opentelemetry-collector
-        imagePullPolicy: IfNotPresent
-        image: ghcr.io/gjpin/opentelemetry-collector-contrib-debian:0.127.0
-        command:
-          - "/usr/bin/bash"
-          - "-c"
-          - "/opt/otel-wrapper/otel-collector-entrypoint.sh"
-        ports:
-          - name: otlp-grpc
-            containerPort: 4317
-            protocol: TCP
-          - name: otlp-http
-            containerPort: 4318
-            protocol: TCP
-        env:
-          - name: MY_POD_IP
-            valueFrom:
-              fieldRef:
-                apiVersion: v1
-                fieldPath: status.podIP
-        resources:
-          requests:
-            memory: "256Mi"
-            cpu: "200m"
-          limits:
-            memory: "2048Mi"
-            cpu: "500m"
-        volumeMounts:
-          - name: collector-config
-            mountPath: /conf
-          - name: otelcol-storage
-            mountPath: /var/lib/otelcol
-          - name: otel-collector-entrypoint
-            mountPath: /opt/otel-wrapper
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 13133
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 13133
-        startupProbe:
-          httpGet:
-            path: /
-            port: 13133
-      volumes:
-          - name: collector-config
-            configMap:
-              name: collector-config
-              items:
-              - key: collector.yaml
-                path: collector.yaml
-          - name: otelcol-storage
-            emptyDir: {}
-          - name: otel-collector-entrypoint
-            configMap:
-              name: otel-collector-entrypoint
-              items:
-              - key: otel-collector-entrypoint.sh
-                path: otel-collector-entrypoint.sh
-                mode: 0755
+  serviceAccountName: opentelemetry-collector
+  terminationGracePeriodSeconds: 3600
+  securityContext: {}
+  # shareProcessNamespace: true # Uncomment to share process namespace for debugging
+  containers:
+    - name: opentelemetry-collector
+      imagePullPolicy: IfNotPresent
+      image: ghcr.io/gjpin/opentelemetry-collector-contrib-debian:0.127.0
+      command:
+        - "/usr/bin/bash"
+        - "-c"
+        - "/opt/otel-wrapper/otel-collector-entrypoint.sh"
+      ports:
+        - name: otlp-grpc
+          containerPort: 4317
+          protocol: TCP
+        - name: otlp-http
+          containerPort: 4318
+          protocol: TCP
+      env:
+        - name: MY_POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+      resources:
+        requests:
+          memory: "256Mi"
+          cpu: "200m"
+        limits:
+          memory: "2048Mi"
+      volumeMounts:
+        - name: collector-config
+          mountPath: /conf
+        - name: otelcol-storage
+          mountPath: /var/lib/otelcol
+        - name: otel-collector-entrypoint
+          mountPath: /opt/otel-wrapper
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 13133
+      livenessProbe:
+        httpGet:
+          path: /
+          port: 13133
+      startupProbe:
+        httpGet:
+          path: /
+          port: 13133
+  volumes:
+    - name: collector-config
+      configMap:
+        name: collector-config
+        items:
+          - key: collector.yaml
+            path: collector.yaml
+    - name: otelcol-storage
+      emptyDir: {}
+    - name: otel-collector-entrypoint
+      configMap:
+        name: otel-collector-entrypoint
+        items:
+          - key: otel-collector-entrypoint.sh
+            path: otel-collector-entrypoint.sh
+            mode: 0755
 ---
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: opentelemetry-collector
+#   namespace: opentelemetry
+#   labels:
+#     app: opentelemetry-collector
+# spec:
+#   replicas: 1
+#   selector:
+#     matchLabels:
+#       app: opentelemetry-collector
+#   template:
+#     metadata:
+#       labels:
+#         app: opentelemetry-collector
+#     spec:
+#       serviceAccountName: opentelemetry-collector
+#       terminationGracePeriodSeconds: 3600
+#       securityContext:
+#         {}
+#       # shareProcessNamespace: true # Uncomment to share process namespace for debugging
+#       containers:
+#       - name: opentelemetry-collector
+#         imagePullPolicy: IfNotPresent
+#         image: ghcr.io/gjpin/opentelemetry-collector-contrib-debian:0.127.0
+#         command:
+#           - "/usr/bin/bash"
+#           - "-c"
+#           - "/opt/otel-wrapper/otel-collector-entrypoint.sh"
+#         ports:
+#           - name: otlp-grpc
+#             containerPort: 4317
+#             protocol: TCP
+#           - name: otlp-http
+#             containerPort: 4318
+#             protocol: TCP
+#         env:
+#           - name: MY_POD_IP
+#             valueFrom:
+#               fieldRef:
+#                 apiVersion: v1
+#                 fieldPath: status.podIP
+#         resources:
+#           requests:
+#             memory: "256Mi"
+#             cpu: "200m"
+#           limits:
+#             memory: "2048Mi"
+#             cpu: "500m"
+#         volumeMounts:
+#           - name: collector-config
+#             mountPath: /conf
+#           - name: otelcol-storage
+#             mountPath: /var/lib/otelcol
+#           - name: otel-collector-entrypoint
+#             mountPath: /opt/otel-wrapper
+#         readinessProbe:
+#           httpGet:
+#             path: /
+#             port: 13133
+#         livenessProbe:
+#           httpGet:
+#             path: /
+#             port: 13133
+#         startupProbe:
+#           httpGet:
+#             path: /
+#             port: 13133
+#       volumes:
+#           - name: collector-config
+#             configMap:
+#               name: collector-config
+#               items:
+#               - key: collector.yaml
+#                 path: collector.yaml
+#           - name: otelcol-storage
+#             emptyDir: {}
+#           - name: otel-collector-entrypoint
+#             configMap:
+#               name: otel-collector-entrypoint
+#               items:
+#               - key: otel-collector-entrypoint.sh
+#                 path: otel-collector-entrypoint.sh
+#                 mode: 0755
+# ---

@@ -21,7 +21,7 @@ data:
     OTEL_ARGS="--config=/conf/collector.yaml"
     # QUEUE_FILE="/var/lib/otelcol/storage/exporter_otlphttp__traces"
     QUEUE_FILE="/var/lib/otelcol/storage/exporter_otlp__traces"
-    BLOCK_THRESHOLD=100
+    BLOCK_THRESHOLD=2000
 
     # Launch the Collector in the background
     echo "Starting OTel Collector..."
@@ -39,8 +39,8 @@ data:
           echo "Wrapper: queue is small enough ($blocks blocks). Proceeding with shutdown."
           break
         fi
-        echo "Wrapper: still $blocks blocks; sleeping 5s..."
-        sleep 5
+        echo "Wrapper: still $blocks blocks; sleeping 20s..."
+        sleep 20
       done
 
       # Forward SIGTERM to the collector process, then wait for it to exit
