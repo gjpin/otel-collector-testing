@@ -1,4 +1,4 @@
-FROM debian:stable-slim
+FROM debian:stable
 
 RUN apt update && apt install -y curl tar
 
