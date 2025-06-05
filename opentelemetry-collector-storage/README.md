@@ -14,4 +14,8 @@ k scale --replicas=0 deployment collector-contrib-telemetrygen -n opentelemetry-
 while true; do \
 stat -c %b /var/lib/otelcol/storage/exporter_otlp__traces && sleep 1s ; \
 done
+
+while true; do \
+cat /proc/7/status | grep -E 'Name|VmRSS|VmSize' && sleep 1s ; \
+done
 ```
